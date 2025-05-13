@@ -6,25 +6,25 @@ struct CanvasView: View {
     @State private var currentDropPosition: DropPosition?
     
     enum DropPosition : Equatable {
-        case top(Int)
-        case bottom(Int)
+        case top(UUID)
+        case bottom(UUID)
     }
     
     var body: some View {
         VStack {
             ScrollView {
                 LazyVStack(spacing: 8) {
-                    ForEach(viewModel.blocks.indices, id: \.self) { index in
-                        BlockSelectorView(block: viewModel.blocks[index])
-                            .overlay(dropIndicator(for: index))
+                    ForEach(viewModel.blocks) { block in
+                        BlockSelectorView(block: block)
+                            .overlay(dropIndicator(for: block.id))
                             .onDrag {
-                                draggingItem = viewModel.blocks[index]
-                                return NSItemProvider(object: "\(index)" as NSString)
+                                draggingItem = block
+                                return NSItemProvider(object: block.id.uuidString as NSString)
                             }
-                            .onDrop(of: [.text], delegate: makeDropDelegate(index: index))
+                            .onDrop(of: [.text], delegate: makeDropDelegate(block: block))
                             .onAppear {
-                                viewModel.blocks[index].onDelete = { [weak viewModel] in
-                                    viewModel?.removeBlock(at: index)
+                                block.onDelete = { [weak viewModel] in
+                                    viewModel?.removeBlock(id: block.id)
                                 }
                             }
                     }
@@ -54,9 +54,9 @@ struct CanvasView: View {
         }
     }
     
-    private func dropIndicator(for index: Int) -> some View {
+    private func dropIndicator(for blockId: UUID) -> some View {
         VStack(spacing: 0) {
-            if currentDropPosition == .top(index) {
+            if case .top(let id) = currentDropPosition, id == blockId {
                 Divider()
                     .frame(height: 2)
                     .background(Color.blue)
@@ -65,7 +65,7 @@ struct CanvasView: View {
             
             Spacer()
             
-            if currentDropPosition == .bottom(index) {
+            if case .bottom(let id) = currentDropPosition, id == blockId {
                 Divider()
                     .frame(height: 2)
                     .background(Color.blue)
@@ -74,9 +74,9 @@ struct CanvasView: View {
         }
     }
     
-    private func makeDropDelegate(index: Int) -> DropDelegate {
+    private func makeDropDelegate(block: BlockViewModel) -> DropDelegate {
         return BlockDropDelegate(
-            index: index,
+            block: block,
             blocks: $viewModel.blocks,
             draggingItem: $draggingItem,
             currentDropPosition: $currentDropPosition
@@ -85,19 +85,17 @@ struct CanvasView: View {
 }
 
 struct BlockDropDelegate: DropDelegate {
-    let index: Int
+    let block: BlockViewModel
     @Binding var blocks: [BlockViewModel]
     @Binding var draggingItem: BlockViewModel?
     @Binding var currentDropPosition: CanvasView.DropPosition?
     
     func dropEntered(info: DropInfo) {
         guard let draggingItem = draggingItem,
-              let fromIndex = blocks.firstIndex(where: { $0.id == draggingItem.id }) else { return }
+              draggingItem.id != block.id else { return }
         
-        if fromIndex != index {
-            let isMovingUp = index < fromIndex
-            currentDropPosition = isMovingUp ? .top(index) : .bottom(index)
-        }
+        let isMovingUp = blocks.firstIndex { $0.id == block.id } ?? 0 < blocks.firstIndex { $0.id == draggingItem.id } ?? 0
+        currentDropPosition = isMovingUp ? .top(block.id) : .bottom(block.id)
     }
     
     func dropUpdated(info: DropInfo) -> DropProposal? {
@@ -108,10 +106,10 @@ struct BlockDropDelegate: DropDelegate {
         currentDropPosition = nil
         
         guard let draggingItem = draggingItem,
-              let fromIndex = blocks.firstIndex(where: { $0.id == draggingItem.id }) else { return false }
+              let fromIndex = blocks.firstIndex(where: { $0.id == draggingItem.id }),
+              let toIndex = blocks.firstIndex(where: { $0.id == block.id }) else { return false }
         
-        let toIndex = index > fromIndex ? index : index
-        blocks.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex)
+        blocks.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
         return true
     }
     

@@ -14,6 +14,10 @@ class CanvasViewModel: ObservableObject {
     func removeBlock(at index: Int) {
         blocks.remove(at: index)
     }
+    
+    func removeBlock(id: UUID) {
+        blocks.removeAll { $0.id == id }
+    }
 
     func run() {
         let interpreter = Interpreter()

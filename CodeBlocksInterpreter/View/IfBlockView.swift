@@ -6,8 +6,8 @@ struct IfBlockView: View {
     @State private var dropPosition: DropPosition?
     
     enum DropPosition : Equatable {
-        case top(Int)
-        case bottom(Int)
+        case top(UUID)
+        case bottom(UUID)
     }
     
     var body: some View {
@@ -38,17 +38,17 @@ struct IfBlockView: View {
     }
     
     private var childrenList: some View {
-        ForEach(viewModel.children.indices, id: \.self) { index in
-            BlockSelectorView(block: viewModel.children[index])
-                .overlay(dropIndicator(for: index))
+        ForEach(viewModel.children) { child in
+            BlockSelectorView(block: child)
+                .overlay(dropIndicator(for: child.id))
                 .onDrag {
-                    draggingChild = viewModel.children[index]
-                    return NSItemProvider(object: "\(index)" as NSString)
+                    draggingChild = child
+                    return NSItemProvider(object: child.id.uuidString as NSString)
                 }
-                .onDrop(of: [.text], delegate: makeDropDelegate(index: index))
+                .onDrop(of: [.text], delegate: makeDropDelegate(child: child))
                 .onAppear {
-                    viewModel.children[index].onDelete = { [weak viewModel] in
-                        viewModel?.children.remove(at: index)
+                    child.onDelete = { [weak viewModel] in
+                        viewModel?.children.removeAll { $0.id == child.id }
                     }
                 }
         }
@@ -62,9 +62,9 @@ struct IfBlockView: View {
         .padding()
     }
     
-    private func dropIndicator(for index: Int) -> some View {
+    private func dropIndicator(for childId: UUID) -> some View {
         VStack(spacing: 0) {
-            if dropPosition == .top(index) {
+            if case .top(let id) = dropPosition, id == childId {
                 Divider()
                     .frame(height: 2)
                     .background(Color.blue)
@@ -73,7 +73,7 @@ struct IfBlockView: View {
             
             Spacer()
             
-            if dropPosition == .bottom(index) {
+            if case .bottom(let id) = dropPosition, id == childId {
                 Divider()
                     .frame(height: 2)
                     .background(Color.blue)
@@ -82,10 +82,10 @@ struct IfBlockView: View {
         }
     }
     
-    private func makeDropDelegate(index: Int) -> DropDelegate {
+    private func makeDropDelegate(child: BlockViewModel) -> DropDelegate {
         ChildDropDelegate(
             parent: viewModel,
-            index: index,
+            child: child,
             draggingChild: $draggingChild,
             dropPosition: $dropPosition
         )
@@ -94,9 +94,7 @@ struct IfBlockView: View {
     private func addChild() {
         let new = BlockViewModel(type: .assignment)
         new.onDelete = { [weak viewModel] in
-            if let index = viewModel?.children.firstIndex(where: { $0.id == new.id }) {
-                viewModel?.children.remove(at: index)
-            }
+            viewModel?.children.removeAll { $0.id == new.id }
         }
         viewModel.children.append(new)
     }
@@ -108,28 +106,26 @@ struct IfBlockView: View {
 
 struct ChildDropDelegate: DropDelegate {
     let parent: BlockViewModel
-    let index: Int
+    let child: BlockViewModel
     @Binding var draggingChild: BlockViewModel?
     @Binding var dropPosition: IfBlockView.DropPosition?
     
     func dropEntered(info: DropInfo) {
         guard let draggingChild = draggingChild,
-              let fromIndex = parent.children.firstIndex(where: { $0.id == draggingChild.id }) else { return }
+              draggingChild.id != child.id else { return }
         
-        if fromIndex != index {
-            let isMovingUp = index < fromIndex
-            dropPosition = isMovingUp ? .top(index) : .bottom(index)
-        }
+        let isMovingUp = parent.children.firstIndex { $0.id == child.id } ?? 0 < parent.children.firstIndex { $0.id == draggingChild.id } ?? 0
+        dropPosition = isMovingUp ? .top(child.id) : .bottom(child.id)
     }
     
     func performDrop(info: DropInfo) -> Bool {
         dropPosition = nil
         
         guard let draggingChild = draggingChild,
-              let fromIndex = parent.children.firstIndex(where: { $0.id == draggingChild.id }) else { return false }
+              let fromIndex = parent.children.firstIndex(where: { $0.id == draggingChild.id }),
+              let toIndex = parent.children.firstIndex(where: { $0.id == child.id }) else { return false }
         
-        let toIndex = index > fromIndex ? index : index
-        parent.children.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex)
+        parent.children.move(fromOffsets: IndexSet(integer: fromIndex), toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex)
         return true
     }
     
