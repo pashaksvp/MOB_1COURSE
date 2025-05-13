@@ -7,6 +7,14 @@ class CanvasViewModel: ObservableObject {
         blocks.append(BlockViewModel(type: type))
     }
 
+    func moveBlock(from source: IndexSet, to destination: Int) {
+        blocks.move(fromOffsets: source, toOffset: destination)
+    }
+
+    func removeBlock(at index: Int) {
+        blocks.remove(at: index)
+    }
+
     func run() {
         let interpreter = Interpreter()
         var ast: [ASTNode] = []

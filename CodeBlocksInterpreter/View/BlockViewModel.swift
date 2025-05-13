@@ -7,6 +7,7 @@ class BlockViewModel: ObservableObject, Identifiable {
     @Published var hasError: Bool = false
     @Published var errorMessage: String?
     @Published var children: [BlockViewModel] = []
+    var onDelete: (() -> Void)?
 
     enum BlockType {
         case variableDeclaration
