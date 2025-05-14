@@ -5,12 +5,24 @@ struct VariableBlockView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Объявление переменных:")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Image(systemName: "v.square.fill")
+                    .foregroundColor(.blue)
+                Text("Объявление переменных")
+                    .font(.headline)
+            }
+            
             TextField("Например: a, b, c", text: $viewModel.text)
-                .textFieldStyle(.roundedBorder)
-                .background(viewModel.hasError ? Color.red.opacity(0.2) : Color.clear)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .font(.system(.body, design: .monospaced))
+                .background(viewModel.hasError ? Color.red.opacity(0.1) : Color.clear)
+                .cornerRadius(6)
+            
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
         }
     }
 }

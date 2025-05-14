@@ -2,8 +2,10 @@ import Foundation
 
 class Interpreter {
     var variables: [String: Int] = [:]
+    var errors: [(message: String, blockId: UUID)] = []
 
     func run(nodes: [ASTNode]) {
+        errors.removeAll()
         for node in nodes {
             execute(node)
         }
@@ -36,12 +38,27 @@ class Interpreter {
         case .binary(let op, let lhs, let rhs):
             let l = evaluate(lhs)
             let r = evaluate(rhs)
+            
             switch op {
             case .plus: return l + r
             case .minus: return l - r
             case .multiply: return l * r
-            case .divide: return r != 0 ? l / r : 0
-            case .modulo: return r != 0 ? l % r : 0
+            case .divide:
+                if r == 0 {
+                    if case let .binary(_, _, .variable(rhsVar)) = rhs {
+                        errors.append(("Деление на ноль: переменная \(rhsVar) равна нулю", UUID()))
+                    } else {
+                        errors.append(("Деление на ноль в выражении", UUID()))
+                    }
+                    return 0
+                }
+                return l / r
+            case .modulo:
+                if r == 0 {
+                    errors.append(("Остаток от деления на ноль", UUID()))
+                    return 0
+                }
+                return l % r
             }
         }
     }

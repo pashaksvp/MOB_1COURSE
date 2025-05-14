@@ -5,7 +5,7 @@ struct CanvasView: View {
     @State private var draggingItem: BlockViewModel?
     @State private var currentDropPosition: DropPosition?
     
-    enum DropPosition : Equatable {
+    enum DropPosition: Equatable {
         case top(UUID)
         case bottom(UUID)
     }
@@ -13,7 +13,12 @@ struct CanvasView: View {
     var body: some View {
         VStack {
             ScrollView {
-                LazyVStack(spacing: 8) {
+                LazyVStack(spacing: 12) {
+                    if let error = viewModel.runtimeError {
+                        ErrorBanner(message: error)
+                            .transition(.opacity)
+                    }
+                    
                     ForEach(viewModel.blocks) { block in
                         BlockSelectorView(block: block)
                             .overlay(dropIndicator(for: block.id))
@@ -24,35 +29,64 @@ struct CanvasView: View {
                             .onDrop(of: [.text], delegate: makeDropDelegate(block: block))
                             .onAppear {
                                 block.onDelete = { [weak viewModel] in
-                                    viewModel?.removeBlock(id: block.id)
+                                    withAnimation {
+                                        viewModel?.removeBlock(id: block.id)
+                                    }
                                 }
                             }
                     }
                 }
                 .padding(.horizontal)
+                .padding(.top, 8)
             }
             
-            HStack(spacing: 16) {
-                Button(action: { viewModel.addBlock(type: .variableDeclaration) }) {
-                    Label("Переменные", systemImage: "v.square")
-                }
+            HStack(spacing: 12) {
+                BlockTypeButton(
+                    icon: "v.square.fill",
+                    color: .blue,
+                    text: "Переменные",
+                    action: { viewModel.addBlock(type: .variableDeclaration) }
+                )
                 
-                Button(action: { viewModel.addBlock(type: .assignment) }) {
-                    Label("Присваивание", systemImage: "arrow.right.square")
-                }
+                BlockTypeButton(
+                    icon: "arrow.right.square.fill",
+                    color: .green,
+                    text: "Присваивание",
+                    action: { viewModel.addBlock(type: .assignment) }
+                )
                 
-                Button(action: { viewModel.addBlock(type: .ifStatement) }) {
-                    Label("Условие", systemImage: "questionmark.square")
-                }
+                BlockTypeButton(
+                    icon: "questionmark.square.fill",
+                    color: .orange,
+                    text: "Условие",
+                    action: { viewModel.addBlock(type: .ifStatement) }
+                )
             }
-            .buttonStyle(.bordered)
-            .padding()
+            .padding(.horizontal)
+            .padding(.top, 8)
             
-            Button("Выполнить", action: viewModel.run)
-                .buttonStyle(.borderedProminent)
-                .padding(.bottom)
+            Button(action: {
+                withAnimation {
+                    viewModel.run()
+                }
+            }) {
+                HStack {
+                    Image(systemName: "play.fill")
+                    Text("Выполнить")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .padding(.horizontal)
+            .padding(.bottom)
+            .buttonStyle(.plain)
         }
+        .background(Color(.systemGroupedBackground))
     }
+    
     
     private func dropIndicator(for blockId: UUID) -> some View {
         VStack(spacing: 0) {
@@ -75,7 +109,7 @@ struct CanvasView: View {
     }
     
     private func makeDropDelegate(block: BlockViewModel) -> DropDelegate {
-        return BlockDropDelegate(
+        BlockDropDelegate(
             block: block,
             blocks: $viewModel.blocks,
             draggingItem: $draggingItem,
@@ -83,6 +117,57 @@ struct CanvasView: View {
         )
     }
 }
+
+
+struct ErrorBanner: View {
+    let message: String
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.yellow)
+            
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.white)
+                .fixedSize(horizontal: false, vertical: true)
+            
+            Spacer()
+        }
+        .padding()
+        .background(Color.red)
+        .cornerRadius(8)
+        .padding(.horizontal)
+        .shadow(radius: 2)
+    }
+}
+
+struct BlockTypeButton: View {
+    let icon: String
+    let color: Color
+    let text: String
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(color)
+                
+                Text(text)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(8)
+            .background(Color(.secondarySystemBackground))
+            .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 
 struct BlockDropDelegate: DropDelegate {
     let block: BlockViewModel

@@ -3,31 +3,20 @@ import SwiftUI
 struct BlockSelectorView: View {
     @ObservedObject var block: BlockViewModel
     @State private var isDragging = false
-    @State private var showDeleteButton = false
     
     var body: some View {
         content
             .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(.systemBackground))
-                    .shadow(radius: isDragging ? 4 : 0)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(backgroundColor)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(borderColor, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(borderColor, lineWidth: 2)
             )
+            .shadow(color: isDragging ? Color.blue.opacity(0.4) : Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             .scaleEffect(isDragging ? 1.02 : 1.0)
             .animation(.spring(), value: isDragging)
-            .contextMenu {
-                Button(role: .destructive) {
-                    block.onDelete?()
-                } label: {
-                    Label("Удалить", systemImage: "trash")
-                }
-            }
-            .onLongPressGesture {
-                showDeleteButton = true
-            }
             .overlay(deleteButton, alignment: .topTrailing)
     }
     
@@ -42,25 +31,30 @@ struct BlockSelectorView: View {
                 IfBlockView(viewModel: block)
             }
         }
-        .padding(12)
+        .padding(16)
     }
     
     private var deleteButton: some View {
-        Group {
-            if showDeleteButton {
-                Button {
-                    block.onDelete?()
-                    showDeleteButton = false
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.red)
-                        .background(Color.white.clipShape(Circle()))
-                }
-                .offset(x: 8, y: -8)
-                .onTapGesture {
-                    showDeleteButton = false
-                }
-            }
+        Button {
+            block.onDelete?()
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(Color.white, Color.red)
+                .font(.system(size: 20))
+        }
+        .offset(x: 8, y: -8)
+        .buttonStyle(.plain)
+    }
+    
+    private var backgroundColor: Color {
+        if block.hasError {
+            return Color.red.opacity(0.1)
+        }
+        switch block.type {
+        case .variableDeclaration: return Color.blue.opacity(0.05)
+        case .assignment: return Color.green.opacity(0.05)
+        case .ifStatement: return Color.orange.opacity(0.05)
         }
     }
     

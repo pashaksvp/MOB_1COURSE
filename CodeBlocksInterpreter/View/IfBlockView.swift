@@ -16,23 +16,41 @@ struct IfBlockView: View {
             childrenList
             addButton
         }
-        .background(Color.blue.opacity(0.05))
+        .background(Color.orange.opacity(0.05))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(borderColor, lineWidth: 2)
         )
-        .padding(.horizontal)
+        .contextMenu {
+            Button(role: .destructive) {
+                viewModel.onDelete?()
+            } label: {
+                Label("Удалить условие", systemImage: "trash")
+            }
+        }
     }
     
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Условие if:")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            HStack {
+                Image(systemName: "questionmark.square.fill")
+                    .foregroundColor(.orange)
+                Text("Условие if")
+                    .font(.headline)
+            }
+            
             TextField("Пример: a > 5", text: $viewModel.text)
-                .textFieldStyle(.roundedBorder)
-                .background(viewModel.hasError ? Color.red.opacity(0.2) : Color.clear)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .font(.system(.body, design: .monospaced))
+                .background(viewModel.hasError ? Color.red.opacity(0.1) : Color.clear)
+                .cornerRadius(6)
+            
+            if let errorMessage = viewModel.errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
         }
         .padding()
     }
@@ -46,20 +64,23 @@ struct IfBlockView: View {
                     return NSItemProvider(object: child.id.uuidString as NSString)
                 }
                 .onDrop(of: [.text], delegate: makeDropDelegate(child: child))
-                .onAppear {
-                    child.onDelete = { [weak viewModel] in
-                        viewModel?.children.removeAll { $0.id == child.id }
-                    }
-                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
         }
     }
     
     private var addButton: some View {
         Button(action: addChild) {
-            Label("Добавить блок внутрь if", systemImage: "plus")
-                .font(.caption)
+            Label("Добавить блок", systemImage: "plus")
+                .font(.subheadline)
+                .frame(maxWidth: .infinity)
+                .padding(8)
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(8)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
         }
-        .padding()
+        .buttonStyle(.plain)
     }
     
     private func dropIndicator(for childId: UUID) -> some View {
@@ -100,7 +121,7 @@ struct IfBlockView: View {
     }
     
     private var borderColor: Color {
-        viewModel.hasError ? Color.red : Color.blue
+        viewModel.hasError ? Color.red : Color.orange
     }
 }
 
