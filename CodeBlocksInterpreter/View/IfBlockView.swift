@@ -5,7 +5,7 @@ struct IfBlockView: View {
     @State private var draggingChild: BlockViewModel?
     @State private var dropPosition: DropPosition?
     
-    enum DropPosition : Equatable {
+    enum DropPosition: Equatable {
         case top(UUID)
         case bottom(UUID)
     }
@@ -22,13 +22,6 @@ struct IfBlockView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(borderColor, lineWidth: 2)
         )
-        .contextMenu {
-            Button(role: .destructive) {
-                viewModel.onDelete?()
-            } label: {
-                Label("Удалить условие", systemImage: "trash")
-            }
-        }
     }
     
     private var header: some View {
@@ -83,6 +76,19 @@ struct IfBlockView: View {
         .buttonStyle(.plain)
     }
     
+    private var deleteButton: some View {
+        Button {
+            viewModel.onDelete?()
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(Color.white, Color.red)
+                .font(.system(size: 20))
+        }
+        .offset(x: 8, y: -8)
+        .buttonStyle(.plain)
+    }
+    
     private func dropIndicator(for childId: UUID) -> some View {
         VStack(spacing: 0) {
             if case .top(let id) = dropPosition, id == childId {
@@ -113,11 +119,11 @@ struct IfBlockView: View {
     }
     
     private func addChild() {
-        let new = BlockViewModel(type: .assignment)
-        new.onDelete = { [weak viewModel] in
-            viewModel?.children.removeAll { $0.id == new.id }
+        let newBlock = BlockViewModel(type: .assignment)
+        newBlock.onDelete = { [weak viewModel] in
+            viewModel?.children.removeAll { $0.id == newBlock.id }
         }
-        viewModel.children.append(new)
+        viewModel.children.append(newBlock)
     }
     
     private var borderColor: Color {

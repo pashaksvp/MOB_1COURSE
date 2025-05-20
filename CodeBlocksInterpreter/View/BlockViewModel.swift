@@ -27,49 +27,32 @@ class BlockViewModel: ObservableObject, Identifiable {
         
         switch type {
         case .variableDeclaration:
-            let names = text
-                .split(separator: ",")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-            
-            if names.isEmpty {
+            let names = text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard !names.isEmpty else {
                 setError("Укажите хотя бы одну переменную")
                 return nil
             }
-            
             return .variableDeclaration(names)
             
         case .assignment:
-            let parts = text.split(separator: "=")
-            guard parts.count == 2 else {
-                setError("Ожидается присваивание вида a = выражение")
+            let parts = text.split(separator: "=").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2, !parts[0].isEmpty else {
+                setError("Некорректное присваивание")
                 return nil
             }
-            
-            let lhs = parts[0].trimmingCharacters(in: .whitespaces)
-            let rhs = parts[1].trimmingCharacters(in: .whitespaces)
-            
-            guard !lhs.isEmpty else {
-                setError("Левая часть пустая")
-                return nil
-            }
-            
-            if let expr = ExpressionParser.parse(rhs) {
-                return .assignment(variable: lhs, expression: expr)
-            } else {
+            guard let expr = ExpressionParser.parse(parts[1]) else {
                 setError("Ошибка в выражении")
                 return nil
             }
+            return .assignment(variable: parts[0], expression: expr)
             
         case .ifStatement:
-            let condition = text
-            if let cond = ConditionParser.parse(condition) {
-                let bodyAST = children.compactMap { $0.toASTNode() }
-                return .ifStatement(condition: cond, body: bodyAST)
-            } else {
+            guard let cond = ConditionParser.parse(text) else {
                 setError("Ошибка в условии")
                 return nil
             }
+            let body = children.compactMap { $0.toASTNode() }
+            return .ifStatement(condition: cond, body: body)
         }
     }
     
