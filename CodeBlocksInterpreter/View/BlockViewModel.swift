@@ -7,6 +7,7 @@ class BlockViewModel: ObservableObject, Identifiable {
     @Published var hasError: Bool = false
     @Published var errorMessage: String?
     @Published var children: [BlockViewModel] = []
+    @Published var elseChildren: [BlockViewModel] = []
     var onDelete: (() -> Void)?
     
     enum BlockType {
@@ -52,7 +53,8 @@ class BlockViewModel: ObservableObject, Identifiable {
                 return nil
             }
             let body = children.compactMap { $0.toASTNode() }
-            return .ifStatement(condition: cond, body: body)
+            let elseBody = elseChildren.isEmpty ? nil : elseChildren.compactMap { $0.toASTNode() }
+            return .ifStatement(condition: cond, body: body, elseBody: elseBody)
         }
     }
     

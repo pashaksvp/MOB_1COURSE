@@ -3,7 +3,7 @@ import Foundation
 indirect enum ASTNode {
     case variableDeclaration([String])
     case assignment(variable: String, expression: Expression)
-    case ifStatement(condition: Condition, body: [ASTNode])
+    case ifStatement(condition: Condition, body: [ASTNode], elseBody: [ASTNode]?)
 }
 
 indirect enum Expression {

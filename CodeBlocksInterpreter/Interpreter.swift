@@ -22,9 +22,11 @@ class Interpreter {
         case .assignment(let variable, let expression):
             let value = evaluate(expression)
             variables[variable] = value
-        case .ifStatement(let condition, let body):
+        case .ifStatement(let condition, let body, let elseBody):
             if evaluate(condition) {
                 run(nodes: body)
+            } else if let elseBody = elseBody {
+                run(nodes: elseBody)
             }
         }
     }
